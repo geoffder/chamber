@@ -1,0 +1,4 @@
+(executable
+ (public_name chamber)
+ (name main)
+ (libraries chamber base stdio))
