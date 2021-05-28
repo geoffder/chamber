@@ -17,24 +17,33 @@ end
 module Well = struct
   let l = 22.
   let w = 14.
-  let h = Slab.h +. Top.h +. 0.001
+  let h = Slab.h +. Top.h
   let x_corner_radius = 2.
   let y_corner_radius = 4.
   let y_corner_x_scale = 1.5
+  let divot_radius = 6.
+  let divot_depth = 2.
   let x = 14.
   let y = Slab.w /. 2.
 
   let scad =
-    let x_corner = Model.cylinder ~center:true ~fn:12 x_corner_radius h in
-    let y_corner =
-      Model.cylinder ~center:true ~fn:24 y_corner_radius h
+    let x_corner = Model.cylinder ~center:true ~fn:12 x_corner_radius (h +. 0.001)
+    and y_corner =
+      Model.cylinder ~center:true ~fn:24 y_corner_radius (h +. 0.001)
       |> Model.scale (y_corner_x_scale, 1., 1.)
-    in
-    Model.hull
-      [ Model.translate (x_corner_radius -. (l /. 2.), 0., 0.) x_corner
-      ; Model.translate ((l /. 2.) -. x_corner_radius, 0., 0.) x_corner
-      ; Model.translate (0., (w /. 2.) -. y_corner_radius, 0.) y_corner
-      ; Model.translate (0., y_corner_radius -. (w /. 2.), 0.) y_corner
+    and divot = Model.sphere ~fn:24 divot_radius
+    and divot_z = (h /. 2.) +. divot_radius -. divot_depth in
+    Model.union
+      [ Model.hull
+          [ Model.translate (x_corner_radius -. (l /. 2.), 0., 0.) x_corner
+          ; Model.translate ((l /. 2.) -. x_corner_radius, 0., 0.) x_corner
+          ; Model.translate (0., (w /. 2.) -. y_corner_radius, 0.) y_corner
+          ; Model.translate (0., y_corner_radius -. (w /. 2.), 0.) y_corner
+          ]
+      ; Model.translate (l /. -4., w /. 4., divot_z) divot
+      ; Model.translate (l /. 4., w /. 4., divot_z) divot
+      ; Model.translate (l /. 4., w /. -4., divot_z) divot
+      ; Model.translate (l /. -4., w /. -4., divot_z) divot
       ]
     |> Model.translate (x, y, h /. 2.)
 end
@@ -53,3 +62,6 @@ end
 
 let scad =
   Model.difference (Model.union [ Slab.scad; Top.scad ]) [ Well.scad; Inflow.scad ]
+(* Model.difference
+ *   (Model.union [ Slab.scad; Top.scad; Model.translate (0., 0., 5.) Well.scad ])
+ *   [ Inflow.scad ] *)
