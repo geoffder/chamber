@@ -27,11 +27,11 @@ module Well = struct
   let y = Slab.w /. 2.
 
   let scad =
-    let x_corner = Model.cylinder ~center:true ~fn:12 x_corner_radius (h +. 0.001)
+    let x_corner = Model.cylinder ~center:true ~fn:32 x_corner_radius (h +. 0.001)
     and y_corner =
-      Model.cylinder ~center:true ~fn:24 y_corner_radius (h +. 0.001)
+      Model.cylinder ~center:true ~fn:32 y_corner_radius (h +. 0.001)
       |> Model.scale (y_corner_x_scale, 1., 1.)
-    and divot = Model.sphere ~fn:24 divot_radius
+    and divot = Model.sphere ~fn:32 divot_radius
     and divot_z = (h /. 2.) +. divot_radius -. divot_depth in
     Model.union
       [ Model.hull
@@ -60,8 +60,52 @@ module Inflow = struct
     |> Model.translate (0.5, Well.y, z)
 end
 
+module Outflow = struct
+  let column_l = 10.
+  let column_w = 5.
+  let column_corner_radius = 2.
+  let channel_radius = 1.
+  let channel_l = 3.
+  let channel_w = 2.
+  let channel_x = Well.x +. (Well.l /. 2.)
+  let column_x = channel_x +. channel_l -. (channel_radius *. 2.) +. (column_l /. 2.)
+  let column_y = Well.y -. channel_w -. (column_w /. 2.)
+
+  let channel =
+    let slice = Model.sphere ~fn:16 channel_radius |> Model.rotate (0., Math.pi /. 2., 0.)
+    and ps =
+      let bez =
+        Bezier.quad
+          ~p1:(0., 0., 0.)
+          ~p2:(channel_l, 0., 0.)
+          ~p3:(channel_l, -.channel_w, 0.)
+      in
+      Bezier.curve bez 0.1
+    in
+    List.fold
+      ~init:(slice, [])
+      ~f:(fun (last, acc) p ->
+        let next = Model.translate p slice in
+        next, Model.hull [ last; next ] :: acc )
+      ps
+    |> fun (_, hs) -> Model.union hs |> Model.translate (channel_x, Well.y, 0.)
+
+  let column =
+    let corner = Model.cylinder ~center:true ~fn:32 column_corner_radius (Well.h +. 0.001)
+    and x = column_corner_radius -. (column_l /. 2.)
+    and y = column_corner_radius -. (column_w /. 2.) in
+    Model.hull
+      [ Model.translate (-.x, y, 0.) corner
+      ; Model.translate (x, y, 0.) corner
+      ; Model.translate (-.x, -.y, 0.) corner
+      ; Model.translate (x, -.y, 0.) corner
+      ]
+    |> Model.translate (column_x, column_y, Well.h /. 2.)
+
+  let scad = Model.union [ channel; column ]
+end
+
 let scad =
-  Model.difference (Model.union [ Slab.scad; Top.scad ]) [ Well.scad; Inflow.scad ]
-(* Model.difference
- *   (Model.union [ Slab.scad; Top.scad; Model.translate (0., 0., 5.) Well.scad ])
- *   [ Inflow.scad ] *)
+  Model.difference
+    (Model.union [ Slab.scad; Top.scad ])
+    [ Well.scad; Inflow.scad; Outflow.scad ]
