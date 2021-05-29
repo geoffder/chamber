@@ -29,7 +29,6 @@ module Top = struct
 end
 
 module Well = struct
-  (* TODO: Add a small divot on the right corner to give more electrode room. *)
   let l = 22.
   let w = 14.
   let x_inset = 3.5
@@ -68,6 +67,31 @@ module Well = struct
       ; Model.translate (l /. -2., 0., minor_divot_z) minor_divot
       ]
     |> Model.translate (x, y, h /. 2.)
+
+  (* TODO: make the below sloped walls version a configuration option.
+   *  - params: z of slope start, slope of walls, from this, the height and scale
+   * of the flared extrusion can be calculated.
+   * - cutting off the extrusion before it cuts into the holder may be required
+   * with very shallow slopes. May not really ever come up though. *)
+  (* let scad =
+   *   let x_corner = Model.circle ~fn:32 x_corner_radius
+   *   and y_corner =
+   *     Model.circle ~fn:32 y_corner_radius |> Model.scale (y_corner_x_scale, 1., 1.)
+   *   in
+   *   let shape =
+   *     Model.hull
+   *       [ Model.translate (x_corner_radius -. (l /. 2.), 0., 0.) x_corner
+   *       ; Model.translate ((l /. 2.) -. x_corner_radius, 0., 0.) x_corner
+   *       ; Model.translate (0., (w /. 2.) -. y_corner_radius, 0.) y_corner
+   *       ; Model.translate (0., y_corner_radius -. (w /. 2.), 0.) y_corner
+   *       ]
+   *   in
+   *   Model.union
+   *     [ Model.linear_extrude ~height:2. shape
+   *     ; Model.linear_extrude ~height:3. ~scale:1.6 shape
+   *       |> Model.translate (0., 0., 1.9999)
+   *     ]
+   *   |> Model.translate (x, y, 0.) *)
 end
 
 module Inflow = struct
