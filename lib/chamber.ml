@@ -28,6 +28,24 @@ module Top = struct
   let scad = Model.cube (Slab.l, w, h) |> Model.translate (0., (Slab.w -. w) /. 2., Slab.h)
 end
 
+type electrode_clearance =
+  | Divot of
+      { major_radius : float
+      ; major_depth : float
+      ; minor_radius : float
+      ; minor_depth : float
+      }
+  | Slope of
+      { start : float
+      ; height : float
+      ; scale : float
+      }
+
+let divot_clearance =
+  Divot { major_radius = 8.; major_depth = 2.; minor_radius = 2.5; minor_depth = 1.5 }
+
+let slope_clearance = Slope { start = 2.; height = 3.; scale = 1.6 }
+
 module Well = struct
   let l = 22.
   let w = 14.
@@ -36,62 +54,46 @@ module Well = struct
   let x_corner_radius = 2.
   let y_corner_radius = 4.
   let y_corner_x_scale = 1.5
-  let major_divot_radius = 8.
-  let major_divot_depth = 2.
-  let minor_divot_radius = 2.5
-  let minor_divot_depth = 1.5
   let x = x_inset +. (l /. 2.)
   let y = Slab.w /. 2.
+  let clearance = divot_clearance
 
   let scad =
-    let x_corner = Model.cylinder ~center:true ~fn:32 x_corner_radius (h +. 0.001)
+    let x_corner = Model.circle ~fn:32 x_corner_radius
     and y_corner =
-      Model.cylinder ~center:true ~fn:32 y_corner_radius (h +. 0.001)
-      |> Model.scale (y_corner_x_scale, 1., 1.)
-    and major_divot = Model.sphere ~fn:32 major_divot_radius
-    and major_divot_z = (h /. 2.) +. major_divot_radius -. major_divot_depth
-    and minor_divot = Model.sphere ~fn:16 minor_divot_radius
-    and minor_divot_z = (h /. 2.) +. minor_divot_radius -. minor_divot_depth in
-    Model.union
-      [ Model.hull
-          [ Model.translate (x_corner_radius -. (l /. 2.), 0., 0.) x_corner
-          ; Model.translate ((l /. 2.) -. x_corner_radius, 0., 0.) x_corner
-          ; Model.translate (0., (w /. 2.) -. y_corner_radius, 0.) y_corner
-          ; Model.translate (0., y_corner_radius -. (w /. 2.), 0.) y_corner
-          ]
-      ; Model.translate (l /. -4., w /. 4., major_divot_z) major_divot
-      ; Model.translate (l /. 4., w /. 4., major_divot_z) major_divot
-      ; Model.translate (l /. 4., w /. -4., major_divot_z) major_divot
-      ; Model.translate (l /. -4., w /. -4., major_divot_z) major_divot
-      ; Model.translate (l /. 2., 0., minor_divot_z) minor_divot
-      ; Model.translate (l /. -2., 0., minor_divot_z) minor_divot
-      ]
-    |> Model.translate (x, y, h /. 2.)
-
-  (* TODO: make the below sloped walls version a configuration option.
-   *  - params: z of slope start, slope of walls, from this, the height and scale
-   * of the flared extrusion can be calculated.
-   * - cutting off the extrusion before it cuts into the holder may be required
-   * with very shallow slopes. May not really ever come up though. *)
-  (* let scad =
-   *   let x_corner = Model.circle ~fn:32 x_corner_radius
-   *   and y_corner =
-   *     Model.circle ~fn:32 y_corner_radius |> Model.scale (y_corner_x_scale, 1., 1.)
-   *   in
-   *   let shape =
-   *     Model.hull
-   *       [ Model.translate (x_corner_radius -. (l /. 2.), 0., 0.) x_corner
-   *       ; Model.translate ((l /. 2.) -. x_corner_radius, 0., 0.) x_corner
-   *       ; Model.translate (0., (w /. 2.) -. y_corner_radius, 0.) y_corner
-   *       ; Model.translate (0., y_corner_radius -. (w /. 2.), 0.) y_corner
-   *       ]
-   *   in
-   *   Model.union
-   *     [ Model.linear_extrude ~height:2. shape
-   *     ; Model.linear_extrude ~height:3. ~scale:1.6 shape
-   *       |> Model.translate (0., 0., 1.9999)
-   *     ]
-   *   |> Model.translate (x, y, 0.) *)
+      Model.circle ~fn:32 y_corner_radius |> Model.scale (y_corner_x_scale, 1., 1.)
+    in
+    let shape =
+      Model.hull
+        [ Model.translate (x_corner_radius -. (l /. 2.), 0., 0.) x_corner
+        ; Model.translate ((l /. 2.) -. x_corner_radius, 0., 0.) x_corner
+        ; Model.translate (0., (w /. 2.) -. y_corner_radius, 0.) y_corner
+        ; Model.translate (0., y_corner_radius -. (w /. 2.), 0.) y_corner
+        ]
+    in
+    match clearance with
+    | Divot { major_radius; major_depth; minor_radius; minor_depth } ->
+      let major_divot = Model.sphere ~fn:32 major_radius
+      and major_divot_z = (h /. 2.) +. major_radius -. major_depth
+      and minor_divot = Model.sphere ~fn:16 minor_radius
+      and minor_divot_z = (h /. 2.) +. minor_radius -. minor_depth in
+      Model.union
+        [ Model.linear_extrude ~height:(h +. 0.0001) ~center:true shape
+        ; Model.translate (l /. -4., w /. 4., major_divot_z) major_divot
+        ; Model.translate (l /. 4., w /. 4., major_divot_z) major_divot
+        ; Model.translate (l /. 4., w /. -4., major_divot_z) major_divot
+        ; Model.translate (l /. -4., w /. -4., major_divot_z) major_divot
+        ; Model.translate (l /. 2., 0., minor_divot_z) minor_divot
+        ; Model.translate (l /. -2., 0., minor_divot_z) minor_divot
+        ]
+      |> Model.translate (x, y, h /. 2.)
+    | Slope { start; height; scale } ->
+      Model.union
+        [ Model.linear_extrude ~height:start shape
+        ; Model.linear_extrude ~height ~scale shape
+          |> Model.translate (0., 0., start -. 0.0001)
+        ]
+      |> Model.translate (x, y, 0.)
 end
 
 module Inflow = struct
