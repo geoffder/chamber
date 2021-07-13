@@ -10,7 +10,7 @@ end
 
 module Seal = struct
   let w = 1.
-  let h = 1.
+  let h = 0.8
   let inset = 1.
 
   let scad =
@@ -56,7 +56,7 @@ module Well = struct
   let y_corner_x_scale = 1.5
   let x = x_inset +. (l /. 2.)
   let y = Slab.w /. 2.
-  let clearance = divot_clearance
+  let clearance = slope_clearance
 
   let scad =
     let x_corner = Model.circle ~fn:32 x_corner_radius
@@ -97,26 +97,26 @@ module Well = struct
 end
 
 module Inflow = struct
-  let radius = 0.5
-  let angle = Math.pi /. 12.
+  let radius = 0.6
+  let angle = Float.pi /. 7.
   let l = (Well.x -. (Well.l /. 2.)) *. 2.
-  let z = (Slab.h +. Top.h) /. 2.
+  let z = Slab.h +. radius +. 0.1
 
   let scad =
-    Model.cylinder ~center:true ~fn:12 radius l
-    |> Model.rotate (0., (Math.pi /. 2.) +. angle, 0.)
+    Model.cylinder ~center:true ~fn:16 radius l
+    |> Model.rotate (0., (Float.pi /. 2.) +. angle, 0.)
     |> Model.translate (0.5, Well.y, z)
 end
 
 module Outflow = struct
   module Channel = struct
-    let radius = 1.2
+    let radius = 1.4
     let l = 3.
     let w = 2.
     let x = Well.x +. (Well.l /. 2.)
 
     let scad =
-      let slice = Model.sphere ~fn:16 radius |> Model.rotate (0., Math.pi /. 2., 0.)
+      let slice = Model.sphere ~fn:16 radius |> Model.rotate (0., Float.pi /. 2., 0.)
       and ps =
         let bez = Bezier.quad ~p1:(0., 0., 0.) ~p2:(l, 0., 0.) ~p3:(l, w, 0.) in
         Bezier.curve bez 0.1
@@ -134,7 +134,7 @@ module Outflow = struct
     let l = 9.
     let w = 5.
     let corner_radius = 2.
-    let x = Channel.x +. Channel.l -. (Channel.radius *. 2.) +. (l /. 2.)
+    let x = Channel.x +. Channel.l -. Channel.radius +. (l /. 2.)
     let y = Well.y +. Channel.w +. (w /. 2.)
 
     let scad =
@@ -151,7 +151,7 @@ module Outflow = struct
   end
 
   module Column = struct
-    let divider_w = 0.5
+    let divider_w = 0.7
     let divider_h = 0.5
     let radius = 2.25
     let x = Tank.x +. (Tank.l /. 2.) -. (Channel.radius *. 2.)
@@ -171,7 +171,7 @@ module Outflow = struct
 
   module Slide = struct
     let l = 1.3
-    let angle = Math.pi /. 10.
+    let angle = Float.pi /. 10.
     let z = 2.
 
     let scad =
@@ -188,12 +188,19 @@ module HolderBlock = struct
   let h = 4.
   let outflow_encroach_w = 0.75
   let inner_wall_l = 2.
+  let cut_angle = Float.pi /. 4.
 
   let w =
     Outflow.Tank.y -. Outflow.Column.w -. Outflow.Column.radius +. outflow_encroach_w
 
   let l = inner_wall_l +. (Outflow.Slide.l /. 2.) +. (Slab.l -. Outflow.Column.x)
-  let scad = Model.cube (l, w, h) |> Model.translate (Slab.l -. l, 0., Slab.h +. Top.h)
+
+  let cut =
+    Model.cube (l, w, h) |> Model.rotate_about_pt (-.cut_angle, 0., 0.) (0., -.w, 0.)
+
+  let scad =
+    Model.difference (Model.cube (l, w, h)) [ cut ]
+    |> Model.translate (Slab.l -. l, 0., Slab.h +. Top.h)
 end
 
 let scad =
