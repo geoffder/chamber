@@ -10,7 +10,7 @@ end
 
 module Seal = struct
   let w = 1.
-  let h = 0.8
+  let h = 0.6
   let inset = 1.
 
   let scad =
@@ -44,7 +44,7 @@ type electrode_clearance =
 let divot_clearance =
   Divot { major_radius = 8.; major_depth = 2.; minor_radius = 2.5; minor_depth = 1.5 }
 
-let slope_clearance = Slope { start = 2.; height = 3.; scale = 1.6 }
+let slope_clearance = Slope { start = 2.; height = 3.; scale = 1.55 }
 
 module Well = struct
   let l = 22.
@@ -97,15 +97,30 @@ module Well = struct
 end
 
 module Inflow = struct
-  let radius = 0.6
-  let angle = Float.pi /. 7.
-  let l = (Well.x -. (Well.l /. 2.)) *. 2.
-  let z = Slab.h +. radius +. 0.1
+  (* TODO: might actually be counter productive to have the opening wider in
+   * the case of using plastic pipette tip inflow. Try a wider all the way shaft,
+   * (or long wide opening followed by narrower finish) adjusting the clearance
+   * cutout accordingly. *)
+  let opening_radius = 0.9
+  let shaft_radius = 0.7
+  let opening_l = 2.
+  let shaft_l = Well.x_inset
+  let angle = Float.pi /. 8.
+  let z = Slab.h +. shaft_radius +. 0.15
 
   let scad =
-    Model.cylinder ~center:true ~fn:16 radius l
-    |> Model.rotate (0., (Float.pi /. 2.) +. angle, 0.)
-    |> Model.translate (0.5, Well.y, z)
+    let shaft =
+      Model.cylinder ~center:true ~fn:16 shaft_radius (shaft_l +. 2.)
+      |> Model.rotate (0., Float.pi /. 2., 0.)
+      |> Model.translate (shaft_l /. 2., 0., 0.)
+    and opening =
+      Model.cylinder ~center:true ~fn:16 opening_radius (opening_l +. 1.)
+      |> Model.rotate (0., Float.pi /. 2., 0.)
+      |> Model.translate ((opening_l /. 2.) -. 1., 0., 0.)
+    in
+    Model.union [ shaft; opening ]
+    |> Model.rotate (0., angle, 0.)
+    |> Model.translate (0., Well.y, z)
 end
 
 module Outflow = struct
