@@ -10,7 +10,7 @@ end
 
 module Seal = struct
   let w = 1.
-  let h = 0.6
+  let h = 0.45
   let inset = 1.
 
   let scad =
@@ -44,7 +44,7 @@ type electrode_clearance =
 let divot_clearance =
   Divot { major_radius = 8.; major_depth = 2.; minor_radius = 2.5; minor_depth = 1.5 }
 
-let slope_clearance = Slope { start = 2.; height = 3.; scale = 1.55 }
+let slope_clearance = Slope { start = 2.15; height = 3.; scale = 1.6 }
 
 module Well = struct
   let l = 22.
@@ -103,10 +103,10 @@ module Inflow = struct
    * cutout accordingly. *)
   let opening_radius = 0.9
   let shaft_radius = 0.7
-  let opening_l = 2.
+  let opening_l = 3.
   let shaft_l = Well.x_inset
   let angle = Float.pi /. 8.
-  let z = Slab.h +. shaft_radius +. 0.15
+  let z = Slab.h +. shaft_radius +. 0.2
 
   let scad =
     let shaft =
@@ -185,7 +185,8 @@ module Outflow = struct
   end
 
   module Slide = struct
-    let l = 1.3
+    let l = 1.4 (* 1.3 too tight, 1.5 pretty good, maybe a bit loose. *)
+
     let angle = Float.pi /. 10.
     let z = 2.
 
@@ -200,7 +201,7 @@ module Outflow = struct
 end
 
 module HolderBlock = struct
-  let h = 4.
+  let h = 3.5
   let outflow_encroach_w = 0.75
   let inner_wall_l = 2.
   let cut_angle = Float.pi /. 4.
