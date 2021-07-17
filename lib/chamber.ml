@@ -2,7 +2,7 @@ open! Base
 open! Scad_ml
 
 module Slab = struct
-  let l = 40.
+  let l = 42.
   let w = 23.
   let h = 1.5
   let scad = Model.cube (l, w, h)
@@ -97,10 +97,6 @@ module Well = struct
 end
 
 module Inflow = struct
-  (* TODO: might actually be counter productive to have the opening wider in
-   * the case of using plastic pipette tip inflow. Try a wider all the way shaft,
-   * (or long wide opening followed by narrower finish) adjusting the clearance
-   * cutout accordingly. *)
   let opening_radius = 0.9
   let shaft_radius = 0.7
   let opening_l = 3.
@@ -126,8 +122,8 @@ end
 module Outflow = struct
   module Channel = struct
     let height = 1.8
-    let thickness = 3.5
-    let l = 3.
+    let thickness = 4.
+    let l = 2.
     let w = 2.
     let x_origin = Well.x +. (Well.l /. 2.)
     let bez_steps = 5
@@ -151,7 +147,7 @@ module Outflow = struct
   end
 
   module Tank = struct
-    let l = 10.
+    let l = 11.
     let w = 5.
     let corner_radius = 2.
     let x = Channel.x_origin +. Channel.l +. (l /. 2.)
