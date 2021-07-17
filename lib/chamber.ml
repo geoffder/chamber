@@ -125,31 +125,36 @@ end
 
 module Outflow = struct
   module Channel = struct
-    let radius = 1.4
+    let height = 1.8
+    let thickness = 3.5
     let l = 3.
     let w = 2.
-    let x = Well.x +. (Well.l /. 2.)
+    let x_origin = Well.x +. (Well.l /. 2.)
+    let bez_steps = 5
 
     let scad =
-      let slice = Model.sphere ~fn:16 radius |> Model.rotate (0., Float.pi /. 2., 0.)
-      and ps =
-        let bez = Bezier.quad ~p1:(0., 0., 0.) ~p2:(l, 0., 0.) ~p3:(l, w, 0.) in
-        Bezier.curve bez 0.1
+      let get_bez front ((x, y, z) as _start) =
+        let jog = if front then thickness else 0. in
+        let p1 = x -. Well.x_corner_radius, y, z
+        and p2 = x +. l +. jog, y, z
+        and p3 = x +. l +. jog, y +. jog +. w, z in
+        Bezier.quad_vec3 ~p1 ~p2 ~p3
       in
-      List.fold
-        ~init:(slice, [])
-        ~f:(fun (last, acc) p ->
-          let next = Model.translate p slice in
-          next, Model.hull [ last; next ] :: acc )
-        ps
-      |> fun (_, hs) -> Model.union hs |> Model.translate (x, Well.y, 0.)
+      Bezier.prism_exn
+        [ get_bez true (0., (thickness /. -2.) +. 0.1, 0.)
+        ; get_bez false (0., (thickness /. 2.) -. 0.1, 0.)
+        ; get_bez false (0., thickness /. 2., height)
+        ; get_bez true (0., thickness /. -2., height)
+        ]
+        (`Uniform bez_steps)
+      |> Model.translate (x_origin, Well.y, 0.)
   end
 
   module Tank = struct
-    let l = 9.
+    let l = 10.
     let w = 5.
     let corner_radius = 2.
-    let x = Channel.x +. Channel.l -. Channel.radius +. (l /. 2.)
+    let x = Channel.x_origin +. Channel.l +. (l /. 2.)
     let y = Well.y +. Channel.w +. (w /. 2.)
 
     let scad =
@@ -169,7 +174,7 @@ module Outflow = struct
     let divider_w = 0.7
     let divider_h = 0.5
     let radius = 2.25
-    let x = Tank.x +. (Tank.l /. 2.) -. (Channel.radius *. 2.)
+    let x = Tank.x +. (Tank.l /. 2.) -. Channel.thickness
     let w = (Tank.w /. 2.) +. divider_w +. radius
 
     let scad =
@@ -185,7 +190,7 @@ module Outflow = struct
   end
 
   module Slide = struct
-    let l = 1.4 (* 1.3 too tight, 1.5 pretty good, maybe a bit loose. *)
+    let l = 1.45 (* 1.3 too tight, 1.5 pretty good, maybe a bit loose. *)
 
     let angle = Float.pi /. 10.
     let z = 2.
@@ -201,7 +206,7 @@ module Outflow = struct
 end
 
 module HolderBlock = struct
-  let h = 3.5
+  let h = 4.
   let outflow_encroach_w = 0.75
   let inner_wall_l = 2.
   let cut_angle = Float.pi /. 4.
